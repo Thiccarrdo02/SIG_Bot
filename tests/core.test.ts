@@ -1,20 +1,22 @@
-import { SYSTEM_PROMPT, SAFETY_REFUSAL_RESPONSE, CAMPAIGN_RULES } from '../src/config/constants';
+import { CORE_PROMPT } from '../src/prompts';
+import { REFUSAL_RESPONSES, BANNED_PATTERNS } from '../src/config';
 
 describe('Constants', () => {
-    test('SYSTEM_PROMPT should contain Shariah Investments', () => {
-        expect(SYSTEM_PROMPT).toContain('Shariah Investments');
+    test('CORE_PROMPT should contain Shariah Investments', () => {
+        expect(CORE_PROMPT).toContain('Shariah Investments');
     });
 
-    test('SYSTEM_PROMPT should contain the Salam Rule', () => {
-        expect(SYSTEM_PROMPT).toContain('Walaikum Assalam');
+    test('CORE_PROMPT should contain the Salam Rule', () => {
+        expect(CORE_PROMPT).toContain('Walaikum Assalam');
     });
 
-    test('SAFETY_REFUSAL_RESPONSE should exist', () => {
-        expect(SAFETY_REFUSAL_RESPONSE.length).toBeGreaterThan(0);
+    test('REFUSAL_RESPONSES should exist', () => {
+        expect(REFUSAL_RESPONSES.replica).toBeDefined();
+        expect(REFUSAL_RESPONSES.tradingTip).toBeDefined();
     });
 
-    test('CAMPAIGN_RULES should have 5 rules', () => {
-        expect(CAMPAIGN_RULES).toHaveLength(5);
+    test('BANNED_PATTERNS should be defined', () => {
+        expect(BANNED_PATTERNS.length).toBeGreaterThan(0);
     });
 });
 
