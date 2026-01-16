@@ -36,7 +36,7 @@ export async function getLeads(req: Request, res: Response) {
  */
 export async function getLeadById(req: Request, res: Response) {
     try {
-        const lead = await leadService.getLeadById(req.params.id);
+        const lead = await leadService.getLeadById(req.params.id as string);
 
         if (!lead) {
             return res.status(404).json({ error: 'Lead not found' });
@@ -85,7 +85,7 @@ export async function updateLead(req: Request, res: Response) {
     try {
         const { status, name, location, phone, budget, path, niche } = req.body;
 
-        const lead = await leadService.updateLead(req.params.id, {
+        const lead = await leadService.updateLead(req.params.id as string, {
             status,
             name,
             location,
