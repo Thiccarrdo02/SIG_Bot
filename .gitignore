@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.env
+.DS_Store
+logs/
+*.log
+coverage/
+.vscode/
+admin/dist
+admin/node_modules
+admin/.env

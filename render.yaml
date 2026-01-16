@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: shariah-investments-bot
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: shariah-redis
+          property: connectionString
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shariah-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+    autoDeploy: false
+
+  - type: redis
+    name: shariah-redis
+    plan: free
+    ipAllowList: [] # Allow all internal
+
+databases:
+  - name: shariah-db
+    databaseName: shariah_bot
+    user: shariah_user
+    plan: free # or starter
+    ipAllowList: []
+

@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Main Lead table - stores all extracted data from conversations
+model Lead {
+  id              String    @id @default(uuid())
+  manychat_id     String    @unique
+  
+  // Core Identity
+  name            String?
+  location        String?
+  phone           String?
+  
+  // Path & Interest
+  path            String?   // "Path A", "Path B", "Path C", "Path D", "Path E"
+  interest        String?   // "Mentorship", "Guidebook", "Sourcing", "FBA", "Hudood", "General"
+  niche           String?   // "Electronics", "Home Decor", "Textiles"
+  
+  // Financial
+  budget          Int?      // In INR (e.g., 800000 for 8L)
+  budget_tier     String?   // "VIP", "Mid", "Low Cap"
+  
+  // Demographics
+  age             Int?
+  age_bracket     String?   // "18-24", "25-40", "41-55", "Others"
+  gender          String?   // "Male", "Female"
+  occupation      String?   // "Salaried", "Business", "Student", "Investor"
+  
+  // Trading Specific
+  experience_level String?  // "Beginner", "Intermediate", "Advanced"
+  
+  // Sourcing Specific
+  product_category String?
+  request_type     String?  // "Broadcast Deal", "Custom Search"
+  target_price     Float?
+  
+  // Status & Intent
+  status          String    @default("New") // "New", "Pending Fee", "Factory Search", "Report Ready", "Enrolled", "Done"
+  wants_call      Boolean   @default(false)
+  ready_to_pay    Boolean   @default(false)
+  compliance_risk Boolean   @default(false)
+  
+  // AI Generated
+  ai_context      String?   // 2-3 sentence summary
+  bot_score       Int?      // 0-100
+  
+  // Metadata
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  // Relations
+  sessions        Session[]
+  hudood_queries  HudoodQuery[]
+  
+  @@index([path])
+  @@index([status])
+  @@index([budget_tier])
+  @@index([created_at])
+}
+
+// Session table - stores conversation history
+model Session {
+  id              String    @id @default(uuid())
+  lead_id         String
+  lead            Lead      @relation(fields: [lead_id], references: [id])
+  
+  current_path    String?   // Current detected path
+  messages        Json      @default("[]") // Array of {role, content}
+  is_processed    Boolean   @default(false) // Has extraction run?
+  
+  last_activity   DateTime  @default(now())
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  @@index([lead_id])
+  @@index([last_activity])
+  @@index([is_processed])
+}
+
+// Hudood queries - for Path D tracking
+model HudoodQuery {
+  id              String    @id @default(uuid())
+  lead_id         String
+  lead            Lead      @relation(fields: [lead_id], references: [id])
+  
+  query           String    // "Is Zomato stock halal?"
+  topic           String?   // "Stock Screening", "Trading"
+  status          String    @default("Pending") // "Redirected", "Pending"
+  
+  created_at      DateTime  @default(now())
+  
+  @@index([lead_id])
+  @@index([status])
+}
+
+// Sourcing Inquiry - for Path A tracking
+model SourcingInquiry {
+  id                  String    @id @default(uuid())
+  client_name         String
+  product_category    String
+  request_type        String    // "Broadcast Deal", "Custom Search"
+  compliance_confirmed Boolean  @default(false)
+  target_price        Float?
+  stage               String    @default("Inquiry") // "Inquiry", "Fee", "Factory", "Report", "Done"
+  
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  
+  @@index([stage])
+}
