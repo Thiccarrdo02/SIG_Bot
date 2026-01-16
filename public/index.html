@@ -57,7 +57,8 @@
             background: rgba(28, 28, 30, 0.65);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
         .view-section {
@@ -684,249 +685,77 @@
         </div>
 
         <div id="view-demographics" class="view-section">
-            <div class="mb-10">
-                <h2 class="text-3xl font-bold text-white mb-2">Audience Demographics</h2>
-                <p class="text-sig-mute text-sm">Interactive Deep-dive intelligence.</p>
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Audience Demographics</h2>
+                    <p class="text-sig-mute text-sm">Interactive Deep-dive intelligence.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="resetData()"
+                        class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Reset Data
+                    </button>
+                    <button onclick="loadDemographics()"
+                        class="glass-panel-light hover:bg-white/10 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
+                    </button>
+                </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Age Distribution -->
                 <div onclick="openDemoDetail('age')"
                     class="glass-panel p-6 rounded-3xl cursor-pointer hover:bg-white/5 transition-colors group">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-6"><i data-lucide="user"
                             class="w-4 h-4 text-sig-green"></i> Age Distribution</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>18-24</span><span
-                                    class="text-white">35%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-blue-500 w-[35%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>25-40</span><span
-                                    class="text-white">45%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-sig-green w-[45%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>41-55</span><span
-                                    class="text-white">15%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-sig-gold w-[15%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Others</span><span
-                                    class="text-white">5%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-gray-600 w-[5%]"></div>
-                            </div>
-                        </div>
+                    <div class="space-y-4" id="demoAgeList">
+                        <div class="text-center text-gray-500 py-4 text-xs italic">No data available</div>
                     </div>
                 </div>
+
+                <!-- Gender Distribution -->
                 <div onclick="openDemoDetail('gender')"
                     class="glass-panel p-6 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group">
                     <h3 class="text-sm font-bold text-white w-full text-left mb-2 flex gap-2"><i data-lucide="users"
                             class="w-4 h-4 text-blue-400"></i> Gender</h3>
-                    <div class="gender-donut flex items-center justify-center mb-6">
-                        <div class="z-10 flex flex-col items-center"><span
-                                class="text-2xl font-bold text-white">70%</span><span
-                                class="text-[10px] text-gray-500">MALE</span></div>
+                    <div class="gender-donut flex items-center justify-center mb-6 relative">
+                        <!-- Simple CSS Donut -->
+                        <svg width="120" height="120" viewBox="0 0 42 42" class="donut">
+                            <circle class="donut-hole" cx="21" cy="21" r="15.91549430918954" fill="transparent">
+                            </circle>
+                            <circle class="donut-ring" cx="21" cy="21" r="15.91549430918954" fill="transparent"
+                                stroke="rgba(255,255,255,0.1)" stroke-width="5"></circle>
+                            <circle id="genderDonutSegment" class="donut-segment" cx="21" cy="21" r="15.91549430918954"
+                                fill="transparent" stroke="#3b82f6" stroke-width="5" stroke-dasharray="0 100"
+                                stroke-dashoffset="25"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-2xl font-bold text-white" id="genderMainPercent">0%</span>
+                            <span class="text-[8px] text-gray-500 uppercase tracking-widest">MALE</span>
+                        </div>
                     </div>
-                    <div class="flex gap-6">
-                        <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div> Male
-                        </div>
-                        <div class="flex items-center gap-2 text-xs text-gray-400">
-                            <div class="w-2 h-2 bg-red-500 rounded-full"></div> Female
-                        </div>
+                    <div class="flex gap-6" id="genderLegend">
+                        <div class="text-xs text-gray-500">No data</div>
                     </div>
                 </div>
+
+                <!-- Occupation -->
                 <div onclick="openDemoDetail('occupation')"
                     class="glass-panel p-6 rounded-3xl cursor-pointer hover:bg-white/5 transition-colors group">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-6"><i data-lucide="briefcase"
                             class="w-4 h-4 text-purple-400"></i> Occupation</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Salaried</span><span
-                                    class="text-white">50%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-purple-500 w-[50%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Business</span><span
-                                    class="text-white">30%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-sig-gold w-[30%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Student</span><span
-                                    class="text-white">15%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-blue-500 w-[15%]"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Inv/Ret</span><span
-                                    class="text-white">5%</span></div>
-                            <div class="bar-container">
-                                <div class="bar-fill bg-sig-green w-[5%]"></div>
-                            </div>
-                        </div>
+                    <div class="space-y-4" id="demoOccList">
+                        <div class="text-center text-gray-500 py-4 text-xs italic">No data available</div>
                     </div>
                 </div>
             </div>
+
+            <!-- Locations -->
             <div class="mb-8">
                 <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2"><i data-lucide="map-pin"
                         class="w-5 h-5 text-orange-400"></i> Global Footprint Intelligence</h3>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div
-                        class="glass-panel p-5 rounded-2xl md:col-span-1 bg-white/5 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
-                        <div
-                            class="text-[10px] text-orange-400 uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
-                            <i data-lucide="globe" class="w-3 h-3"></i> Overall Leaders
-                        </div>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-white mb-1"><span>🇮🇳
-                                        India</span><span>45%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-white w-[45%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-white mb-1"><span>🇦🇪
-                                        UAE</span><span>30%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-white/60 w-[30%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-white mb-1"><span>🇬🇧
-                                        UK</span><span>15%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-white/30 w-[15%]"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl md:col-span-1 border-white/5">
-                        <div
-                            class="text-[10px] text-blue-400 uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
-                            <i data-lucide="bar-chart-2" class="w-3 h-3"></i> Trading Hubs
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳
-                                        Mumbai</span><span class="text-blue-400">40%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-blue-500 w-[40%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳
-                                        Bangalore</span><span class="text-blue-400/70">35%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-blue-500/60 w-[35%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳 Pune</span><span
-                                        class="text-blue-400/40">15%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-blue-500/30 w-[15%]"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl md:col-span-1 border-white/5">
-                        <div
-                            class="text-[10px] text-sig-gold uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
-                            <i data-lucide="layers" class="w-3 h-3"></i> FBA Capital
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇬🇧
-                                        London</span><span class="text-sig-gold">50%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-gold w-[50%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇦🇪 Dubai</span><span
-                                        class="text-sig-gold/70">30%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-gold/60 w-[30%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳 Surat</span><span
-                                        class="text-sig-gold/40">10%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-gold/30 w-[10%]"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl md:col-span-1 border-white/5">
-                        <div
-                            class="text-[10px] text-sig-green uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
-                            <i data-lucide="package" class="w-3 h-3"></i> Sourcing HQ
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇦🇪 Dubai</span><span
-                                        class="text-sig-green">45%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-green w-[45%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳 Delhi</span><span
-                                        class="text-sig-green/70">35%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-green/60 w-[35%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇸🇦
-                                        Riyadh</span><span class="text-sig-green/40">15%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-green/30 w-[15%]"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl md:col-span-1 border-white/5">
-                        <div
-                            class="text-[10px] text-sig-purple uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
-                            <i data-lucide="shield-check" class="w-3 h-3"></i> Hudood Users
-                        </div>
-                        <div class="space-y-3">
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳
-                                        Hyderabad</span><span class="text-sig-purple">40%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-purple w-[40%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇮🇳
-                                        Kerala</span><span class="text-sig-purple/70">35%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-purple/60 w-[35%]"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-gray-300"><span>🇬🇧
-                                        Blackburn</span><span class="text-sig-purple/40">15%</span></div>
-                                <div class="bar-container">
-                                    <div class="bar-fill bg-sig-purple/30 w-[15%]"></div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4" id="demoLocationGrid">
+                    <div class="col-span-full text-center text-gray-500 py-8 text-sm italic">No location data mapped yet
                     </div>
                 </div>
             </div>
@@ -1424,12 +1253,117 @@
                     leads = [];
                 }
                 renderLeads();
+                loadDemographics(); // Load demographics after leads
             } catch (error) {
                 console.error('Error loading leads:', error);
                 leads = [];
                 renderLeads();
             }
         }
+
+        // === DEMOGRAPHICS LOGIC ===
+        async function loadDemographics() {
+            try {
+                // Fetch live demographics from backend
+                const res = await fetch(`${API_BASE_URL}/api/demographics`);
+                if (!res.ok) throw new Error("Failed to load demographics");
+                const data = await res.json();
+
+                // 1. Render Age
+                const ageList = document.getElementById('demoAgeList');
+                if (data.age.length > 0) {
+                    ageList.innerHTML = data.age.map(item => `
+                        <div>
+                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>${item.bracket}</span><span class="text-white">${item.percentage}%</span></div>
+                            <div class="bar-container">
+                                <div class="bar-fill bg-sig-green w-[${item.percentage}%]"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    ageList.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs italic">No data available</div>';
+                }
+
+                // 2. Render Gender
+                // Update Donut
+                const maleData = data.gender.find(g => g.type === 'Male') || { percentage: 0 };
+                const femaleData = data.gender.find(g => g.type === 'Female') || { percentage: 0 };
+
+                // Set CSS dasharray for simple donut (0 100 is empty, 100 0 is full)
+                // circumference is ~100
+                const percent = maleData.percentage;
+                const donutSegment = document.getElementById('genderDonutSegment');
+                if (donutSegment) {
+                    donutSegment.setAttribute('stroke-dasharray', `${percent} ${100 - percent}`);
+                }
+                document.getElementById('genderMainPercent').innerText = `${percent}%`;
+
+                // Update Legend
+                const genderLegend = document.getElementById('genderLegend');
+                if (data.gender.length > 0) {
+                    genderLegend.innerHTML = data.gender.map(g => `
+                        <div class="flex items-center gap-2 text-xs text-gray-400">
+                            <div class="w-2 h-2 ${g.type === 'Male' ? 'bg-blue-500' : 'bg-red-500'} rounded-full"></div> ${g.type} (${g.percentage}%)
+                        </div>
+                     `).join('');
+                } else {
+                    genderLegend.innerHTML = '<div class="text-xs text-gray-500">No data</div>';
+                }
+
+                // 3. Render Occupation
+                const occList = document.getElementById('demoOccList');
+                if (data.occupation.length > 0) {
+                    occList.innerHTML = data.occupation.map(item => `
+                        <div>
+                            <div class="flex justify-between text-xs text-gray-400 mb-1"><span>${item.type}</span><span class="text-white">${item.percentage}%</span></div>
+                            <div class="bar-container">
+                                <div class="bar-fill bg-purple-500 w-[${item.percentage}%]"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    occList.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs italic">No data available</div>';
+                }
+
+                // 4. Render Locations
+                const locGrid = document.getElementById('demoLocationGrid');
+                if (data.locations.length > 0) {
+                    locGrid.innerHTML = data.locations.map(item => `
+                     <div class="glass-panel p-5 rounded-2xl md:col-span-1 border-white/5">
+                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-4 tracking-widest flex items-center gap-2">
+                           <i data-lucide="map-pin" class="w-3 h-3"></i> ${item.location}
+                        </div>
+                         <div class="text-2xl font-bold text-white">${item.count}</div>
+                         <div class="text-[10px] text-sig-mute">Active Users</div>
+                    </div>
+                    `).join('');
+                } else {
+                    locGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8 text-sm italic">No location data mapped yet</div>';
+                }
+
+            } catch (err) {
+                console.error("Demographics Load Error", err);
+            }
+        }
+
+        async function resetData() {
+            if (!confirm("⚠️ ARE YOU SURE? \n\nThis will DELETE ALL LEADS permanently. This action cannot be undone.")) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/leads/reset`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("System Reset Complete. Refreshing...");
+                    window.location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                console.error("Reset Error", err);
+                alert("Failed to connect to backend for reset.");
+            }
+        }
+
 
         // Refresh leads periodically (every 30 seconds)
         function startAutoRefresh() {

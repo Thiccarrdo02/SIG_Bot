@@ -18,6 +18,7 @@ import {
     calcLandedCost,
     calcFbaProfit,
     createSourcingInquiry,
+    resetLeads,
 } from '../controllers';
 
 const router = Router();
@@ -49,6 +50,10 @@ router.post('/calc/landed-cost', calcLandedCost);
 router.post('/calc/fba-profit', calcFbaProfit);
 
 // Sourcing inquiries
+// Sourcing inquiries
 router.post('/inquiries/sourcing', createSourcingInquiry);
+
+// Data Reset
+router.delete('/leads/reset', resetLeads);
 
 export default router;

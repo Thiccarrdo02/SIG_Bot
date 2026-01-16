@@ -256,3 +256,17 @@ export async function createSourcingInquiry(req: Request, res: Response) {
         res.status(500).json({ error: 'Failed to create inquiry' });
     }
 }
+
+/**
+ * DELETE /api/leads/reset
+ * Reset all data (Dev only)
+ */
+export async function resetLeads(req: Request, res: Response) {
+    try {
+        await leadService.deleteAllLeads();
+        res.json({ success: true, message: 'All data has been reset.' });
+    } catch (error) {
+        logger.error('Error resetting data:', error);
+        res.status(500).json({ error: 'Failed to reset data' });
+    }
+}

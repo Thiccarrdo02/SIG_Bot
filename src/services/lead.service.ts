@@ -313,6 +313,16 @@ export class LeadService {
             return acc;
         }, {} as Record<string, T[]>);
     }
+    /**
+     * Delete ALL leads (Data Reset)
+     */
+    async deleteAllLeads() {
+        // Delete related data first due to foreign keys if any (Sessions, HudoodQueries)
+        // Prisma cascade delete usually handles this if configured, but good to be explicit or safe
+        await prisma.session.deleteMany({});
+        await prisma.hudoodQuery.deleteMany({});
+        return prisma.lead.deleteMany({});
+    }
 }
 
 export const leadService = new LeadService();
