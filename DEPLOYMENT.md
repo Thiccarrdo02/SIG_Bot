@@ -1,280 +1,85 @@
-# SIG Chatbot Deployment Guide
+# 🚀 SIG Chatbot - Production Deployment Guide
 
-Complete step-by-step guide to deploy the SIG Chatbot system.
-
-## 📋 Prerequisites
-
-- GitHub account
-- OpenAI API key
-- [Render.com](https://render.com) account (free tier available)
-- [Supabase](https://supabase.com) account (free tier available)
-- [Upstash](https://upstash.com) account (free tier available)
-- [Netlify](https://netlify.com) or [Vercel](https://vercel.com) account (for frontend)
+This guide details how to deploy the **Shariah Investments Global (SIG)** Chatbot using a robust split architecture:
+- **Frontend**: Vercel (Global CDN, fast loading)
+- **Backend API**: Render (Node.js Service)
+- **Database**: Supabase / Neon (PostgreSQL)
+- **Cache**: Render Redis (Session management)
 
 ---
 
-## Phase 1: Database Setup (Supabase)
-
-### Step 1: Create Project
-1. Go to [supabase.com](https://supabase.com) and sign in
-2. Click "New Project"
-3. Name it `sig-chatbot`
-4. Choose a secure password (save it!)
-5. Select region closest to your users
-
-### Step 2: Get Connection String
-1. Go to **Settings → Database**
-2. Copy the **Connection string (URI)**
-3. Replace `[YOUR-PASSWORD]` with your database password
-4. Save as your `DATABASE_URL`
-
-Example:
-```
-postgresql://postgres:YourPassword@db.xxxx.supabase.co:5432/postgres
-```
-
-### Step 3: Initialize Database
-After backend is deployed, run migrations (see Phase 4).
+## ✅ Prerequisites
+1.  **GitHub Repo**: Ensure your code is pushed to GitHub.
+2.  **Database**: A PostgreSQL database URL (e.g., from Supabase or Render PostgreSQL).
+3.  **API Keys**: OpenAI API Key.
 
 ---
 
-## Phase 2: Redis Setup (Upstash)
-
-### Step 1: Create Database
-1. Go to [upstash.com](https://upstash.com) and sign in
-2. Click "Create Database"
-3. Name it `sig-chatbot-redis`
-4. Select region (match your Render region)
-5. Click "Create"
-
-### Step 2: Get Redis URL
-1. In the database dashboard, find **UPSTASH_REDIS_REST_URL**
-2. Or use the "Redis" tab for standard Redis URL
-3. Save as your `REDIS_URL`
-
-Example:
-```
-redis://default:xxxx@xxx-xxx.upstash.io:6379
-```
+## 1️⃣ Deploy Redis (on Render) 🧠
+1.  Log in to [Render Dashboard](https://dashboard.render.com/).
+2.  Click **New +** -> **Redis**.
+3.  **Name**: `sig-redis`
+4.  **Region**: Singapore (or nearest to your users).
+5.  **Max Memory**: Free Tier is fine for testing; Starter for production.
+6.  Click **Create Redis**.
+7.  **Copy the `Internal Redis URL`** (e.g., `redis://sig-redis:6379`). You will need this for the Backend.
 
 ---
 
-## Phase 3: Backend Deployment (Render)
-
-### Step 1: Push to GitHub
-```bash
-# Initialize git if not already
-git init
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Initial deployment"
-
-# Create repo on GitHub, then:
-git remote add origin https://github.com/YOUR_USERNAME/sig-chatbot.git
-git push -u origin main
-```
-
-### Step 2: Create Render Web Service
-1. Go to [render.com](https://render.com) and sign in
-2. Click "New" → "Web Service"
-3. Connect your GitHub repository
-4. Configure:
-   - **Name**: `sig-chatbot`
-   - **Environment**: `Node`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-   - **Plan**: Free (or Starter for better performance)
-
-### Step 3: Add Environment Variables
-In Render dashboard, go to **Environment** and add:
-
-| Key | Value |
-|-----|-------|
-| `NODE_ENV` | production |
-| `OPENAI_API_KEY` | sk-your-key-here |
-| `DATABASE_URL` | Your Supabase URL |
-| `REDIS_URL` | Your Upstash URL |
-| `WEBHOOK_SECRET` | Generate a random string |
-| `RESPONDER_MODEL` | gpt-4o-mini |
-| `EXTRACTOR_MODEL` | gpt-4o-mini |
-| `CHAT_HISTORY_LIMIT` | 12 |
-
-### Step 4: Deploy
-1. Click "Create Web Service"
-2. Wait for build to complete
-3. Note your service URL: `https://sig-chatbot.onrender.com`
-
-### Step 5: Verify
-Visit `https://your-app.onrender.com/api/health` - should return:
-```json
-{ "status": "ok", "timestamp": "..." }
-```
+## 2️⃣ Deploy Backend API (on Render) ⚙️
+1.  Click **New +** -> **Web Service**.
+2.  Connect your **GitHub Repository**.
+3.  **Name**: `sig-backend`
+4.  **Region**: Same as Redis (Singapore).
+5.  **Branch**: `main`
+6.  **Runtime**: **Node**
+7.  **Build Command**: `npm install && npm run build`
+8.  **Start Command**: `npm start`
+9.  **Environment Variables**:
+    -   `NODE_ENV`: `production`
+    -   `PORT`: `10000`
+    -   `DATABASE_URL`: `postgres://user:pass@host/db` (Your Postgres URL)
+    -   `REDIS_URL`: `redis://...` (The Internal Redis URL from Step 1)
+    -   `OPENAI_API_KEY`: `sk-...`
+    -   `WEBHOOK_SECRET`: `(Create a secure password)`
+    -   `SESSION_TTL_HOURS`: `24`
+10. Click **Create Web Service**.
+11. **Wait for deployment** to finish.
+12. **Copy your Backend URL** (e.g., `https://sig-backend.onrender.com`).
 
 ---
 
-## Phase 4: Database Migration
+## 3️⃣ Deploy Frontend (on Vercel) 🎨
+1.  **PRE-DEPLOYMENT STEP**:
+    -   Open `vercel.json` in your code.
+    -   Replace `https://YOUR_RENDER_BACKEND_URL` with your **actual Render Backend URL** (from Step 2).
+    -   *Example*: `"destination": "https://sig-backend.onrender.com/api/:path*"`
+    -   Commit and push this change to GitHub.
 
-After backend is deployed:
-
-### Option A: Via Render Shell
-1. In Render dashboard, go to your service
-2. Click "Shell" tab
-3. Run:
-```bash
-npx prisma migrate deploy
-```
-
-### Option B: Via Local
-```bash
-# Set DATABASE_URL locally
-export DATABASE_URL="your-supabase-url"
-
-# Run migration
-npx prisma migrate deploy
-```
+2.  Log in to [Vercel](https://vercel.com/).
+3.  Click **Add New...** -> **Project**.
+4.  Import your **GitHub Repository**.
+5.  **Project Name**: `sig-chatbot`
+6.  **Framework Preset**: Select **Other**.
+7.  **Root Directory**: Leave as `./` (Main folder).
+8.  **Build and Output Settings** (Expand this):
+    -   **Build Command**: *(Leave Empty)*
+    -   **Output Directory**: `public`
+    -   *(Note: This tells Vercel to serve the `public` folder as the website)*
+9.  Click **Deploy**.
 
 ---
 
-## Phase 5: Frontend Deployment (Netlify)
-
-The frontend is a static HTML file that connects to your backend API.
-
-### Step 1: Option A - Netlify Drop
-1. Go to [app.netlify.com/drop](https://app.netlify.com/drop)
-2. Drag and drop the `public` folder
-3. Done! Get your URL.
-
-### Step 2: Option B - Netlify CLI
-```bash
-# Install Netlify CLI
-npm install -g netlify-cli
-
-# Login
-netlify login
-
-# Deploy
-netlify deploy --prod --dir=public
-```
-
-### Step 3: Option C - Vercel
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-cd public
-vercel --prod
-```
-
-### Step 4: Configure API URL
-The frontend automatically uses `window.location.origin` for API calls.
-
-**If deploying frontend separately from backend:**
-Edit `public/index.html` line:
-```javascript
-const API_BASE_URL = 'https://your-backend.onrender.com';
-```
+## 4️⃣ Final Connection Test 🔗
+1.  Open your **Vercel App URL** (e.g., `https://sig-chatbot.vercel.app`).
+2.  Look at the top-left **Connection Indicator**.
+    -   🔴 **Red (Checking...)**: Wait a few seconds.
+    -   🟢 **Green (Connected)**: Frontend is successfully talking to Backend via Vercel Proxy.
+3.  Test a feature (e.g., "Landed Cost Calculator" or "Add Lead") to confirm API calls work.
 
 ---
 
-## Phase 6: ManyChat Integration
-
-### Step 1: Create External Request
-1. In ManyChat, go to **Automation → Flows**
-2. Add an "External Request" action
-3. Configure:
-   - **URL**: `https://your-app.onrender.com/api/webhook/manychat`
-   - **Method**: POST
-   - **Headers**: `Content-Type: application/json`
-   - **Body**:
-   ```json
-   {
-     "manychat_id": "{{user_id}}",
-     "user_message": "{{last_user_message}}",
-     "user_name": "{{first_name}} {{last_name}}"
-   }
-   ```
-
-### Step 2: Handle Response
-1. Add a "Send Message" action after the External Request
-2. Use `{{response.reply}}` for the bot message
-
----
-
-## 📊 Monitoring
-
-### Health Check
-- Endpoint: `GET /api/health`
-- Shows: Status, database connection, Redis connection
-
-### Logs
-- Render: Dashboard → Logs
-- Filter by "error" for issues
-
-### Lead Dashboard
-- Visit your frontend URL
-- Connection indicator shows green when connected
-
----
-
-## 🔧 Configuration Changes
-
-### Change AI Model
-Update in Render Environment Variables:
-```
-RESPONDER_MODEL=gpt-4o
-EXTRACTOR_MODEL=gpt-4o-mini
-```
-
-### Change History Limit
-```
-CHAT_HISTORY_LIMIT=20
-```
-
-### Adjust Session Timeout
-```
-INACTIVITY_MINUTES=30
-SESSION_TTL_HOURS=48
-```
-
----
-
-## 🚨 Troubleshooting
-
-### "Connection Offline" in Frontend
-1. Check backend is running: visit `/api/health`
-2. Check CORS - backend allows all origins by default
-3. Check browser console for errors
-
-### "No leads showing"
-1. Database may be empty - real leads appear after chat interactions
-2. Check database connection in Render logs
-3. Run migration if tables don't exist
-
-### "OpenAI API Error"
-1. Check API key is correct
-2. Check account has credits
-3. Try different model: `gpt-4o-mini` is cheaper
-
----
-
-## 📝 Quick Reference
-
-| Component | URL |
-|-----------|-----|
-| Backend | `https://your-app.onrender.com` |
-| Health Check | `https://your-app.onrender.com/api/health` |
-| Dashboard | `https://your-frontend.netlify.app` |
-| Webhook | `https://your-app.onrender.com/api/webhook/manychat` |
-
----
-
-## 🔒 Security Notes
-
-1. **Never commit `.env` file** - it's in `.gitignore`
-2. **Rotate API keys** regularly
-3. **Use WEBHOOK_SECRET** for production ManyChat integration
-4. **Monitor usage** in OpenAI and Upstash dashboards
+## 🛠️ Troubleshooting
+-   **Frontend shows "Offline"**: Check `vercel.json` destination URL. It must match your Render Backend URL exactly.
+-   **Backend Render Build Failed**: Check logs. Ensure `@types` packages are in `dependencies` in `package.json` (we fixed this already).
+-   **Redis Error**: Ensure Backend and Redis are in the same Render region.
