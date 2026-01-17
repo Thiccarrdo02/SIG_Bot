@@ -88,13 +88,13 @@ export class ExtractorService {
     }
 
     /**
-     * Save extracted data to database
+     * Save extracted data to database (upsert - create if not exists)
      */
     async saveToDatabase(manychatId: string, data: ExtractedData): Promise<void> {
         try {
-            await prisma.lead.update({
+            await prisma.lead.upsert({
                 where: { manychat_id: manychatId },
-                data: {
+                update: {
                     name: data.name,
                     location: data.location,
                     phone: data.phone,
@@ -119,9 +119,34 @@ export class ExtractorService {
                     bot_score: data.bot_score,
                     updated_at: new Date(),
                 },
+                create: {
+                    manychat_id: manychatId,
+                    name: data.name,
+                    location: data.location,
+                    phone: data.phone,
+                    path: data.path,
+                    interest: data.interest,
+                    niche: data.niche,
+                    budget: data.budget,
+                    budget_tier: data.budget_tier,
+                    age: data.age,
+                    age_bracket: data.age_bracket,
+                    gender: data.gender,
+                    occupation: data.occupation,
+                    experience_level: data.experience_level,
+                    product_category: data.product_category,
+                    request_type: data.request_type,
+                    target_price: data.target_price,
+                    status: data.status,
+                    wants_call: data.wants_call,
+                    ready_to_pay: data.ready_to_pay,
+                    compliance_risk: data.compliance_risk,
+                    ai_context: data.ai_context,
+                    bot_score: data.bot_score,
+                },
             });
 
-            logger.info(`Updated lead ${manychatId} with extracted data`);
+            logger.info(`Upserted lead ${manychatId} with extracted data`);
 
         } catch (error) {
             logger.error(`Failed to save extracted data for ${manychatId}:`, error);
