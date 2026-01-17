@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
-    "build": "prisma generate && prisma db push && tsc",
+    "build": "prisma generate && tsc",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "postinstall": "prisma generate",
