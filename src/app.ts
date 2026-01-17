@@ -8,9 +8,11 @@ import cors from 'cors';
 import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
+import cron from 'node-cron';
 import { config, validateConfig } from './config';
 import { apiRoutes } from './routes';
 import { logger } from './utils';
+import { sessionService, extractorService } from './services';
 
 // Validate environment
 try {
@@ -66,6 +68,35 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
     res.status(500).json({ error: 'Internal server error' });
 });
 
+// Session extraction cron job - runs every 5 minutes
+async function processInactiveSessions() {
+    try {
+        const inactiveSessions = await sessionService.getInactiveSessions();
+        if (inactiveSessions.length === 0) return;
+
+        logger.info(`[CRON] Processing ${inactiveSessions.length} inactive sessions...`);
+
+        for (const session of inactiveSessions) {
+            try {
+                const extractedData = await extractorService.extractData(session);
+
+                if (extractedData) {
+                    await extractorService.saveToDatabase(session.manychatId, extractedData);
+                    logger.info(`[CRON] Extracted data for ${session.manychatId}: ${extractedData.name || 'Unknown'}`);
+                }
+
+                await sessionService.markAsProcessed(session.manychatId);
+            } catch (error) {
+                logger.error(`[CRON] Error processing session ${session.manychatId}:`, error);
+            }
+        }
+
+        logger.info('[CRON] Session processing complete');
+    } catch (error) {
+        logger.error('[CRON] Session processing failed:', error);
+    }
+}
+
 // Start server
 const PORT = config.port;
 app.listen(PORT, () => {
@@ -73,6 +104,17 @@ app.listen(PORT, () => {
     logger.info(`📊 Dashboard: http://localhost:${PORT}`);
     logger.info(`🔗 Webhook: http://localhost:${PORT}/api/webhook/manychat`);
     logger.info(`💚 Health: http://localhost:${PORT}/api/health`);
+
+    // Start cron job for session extraction (every 5 minutes)
+    cron.schedule('*/5 * * * *', () => {
+        processInactiveSessions().catch(err => logger.error('Cron error:', err));
+    });
+    logger.info('⏰ Extraction cron job scheduled (every 5 minutes)');
+
+    // Run once on startup after 30 seconds
+    setTimeout(() => {
+        processInactiveSessions().catch(err => logger.error('Initial extraction error:', err));
+    }, 30000);
 });
 
 export default app;

@@ -51,31 +51,22 @@ export class ResponderService {
         }
 
         try {
-            // Get lead data for context
+            // Get lead data for context (includes all previously extracted info)
             const leadData = await this.getLeadData(session.manychatId);
 
-            // Extract user info from conversation for context
+            // Extract user info from current conversation
             const extractedInfo = this.extractUserInfo(session.messages);
 
-            // Build conversation summary with extracted info
-            let conversationSummary = 'New conversation';
-            if (session.messages.length > 0) {
-                const parts = [];
-                if (extractedInfo.name) parts.push(`User name: ${extractedInfo.name}`);
-                if (extractedInfo.location) parts.push(`Location: ${extractedInfo.location}`);
-                if (extractedInfo.phone) parts.push(`Phone: ${extractedInfo.phone}`);
-                if (extractedInfo.occupation) parts.push(`Occupation: ${extractedInfo.occupation}`);
-                parts.push(`Messages: ${session.messages.length}`);
-                parts.push(`Topics: ${this.summarizeTopics(session.messages)}`);
-                conversationSummary = parts.join('. ');
-            }
+            // Build comprehensive context memory block
+            // This ensures the bot NEVER forgets important user information
+            const contextMemory = this.buildContextMemory(leadData, extractedInfo, session);
 
-            // Build system prompt
+            // Build system prompt with context memory
             const systemPrompt = buildSystemPrompt(session.currentPath, {
                 name: extractedInfo.name || leadData?.name,
                 budget: leadData?.budget,
                 location: extractedInfo.location || leadData?.location,
-                conversationSummary,
+                conversationSummary: contextMemory,
             });
 
             // Build conversation history for OpenAI format
@@ -83,9 +74,10 @@ export class ResponderService {
                 { role: 'system', content: systemPrompt },
             ];
 
-            // Add conversation history - configurable via CHAT_HISTORY_LIMIT env var
-            const historyLimit = config.session.historyLimit;
-            for (const msg of session.messages.slice(-historyLimit)) {
+            // Add conversation history - only last N messages for token efficiency
+            // Full history stored in DB (historyLimit=100), but only send contextLimit to LLM
+            const contextLimit = config.session.contextLimit;
+            for (const msg of session.messages.slice(-contextLimit)) {
                 messages.push({
                     role: msg.role === 'user' ? 'user' : 'assistant',
                     content: msg.content,
@@ -212,7 +204,7 @@ export class ResponderService {
     }
 
     /**
-     * Get lead data from database (optional)
+     * Get lead data from database (ALL fields for context memory)
      */
     private async getLeadData(manychatId: string) {
         // Skip if database not configured
@@ -224,7 +216,24 @@ export class ResponderService {
             const { prisma } = await import('./db');
             return await prisma.lead.findUnique({
                 where: { manychat_id: manychatId },
-                select: { name: true, budget: true, location: true },
+                select: {
+                    name: true,
+                    location: true,
+                    phone: true,
+                    path: true,
+                    interest: true,
+                    niche: true,
+                    budget: true,
+                    budget_tier: true,
+                    age: true,
+                    age_bracket: true,
+                    gender: true,
+                    occupation: true,
+                    experience_level: true,
+                    product_category: true,
+                    request_type: true,
+                    ai_context: true,
+                },
             });
         } catch (error) {
             return null;
@@ -245,6 +254,68 @@ export class ResponderService {
         if (/book|guide/i.test(text)) topics.push('Book');
 
         return topics.length > 0 ? topics.join(', ') : 'General inquiry';
+    }
+
+    /**
+     * Build comprehensive context memory block
+     * This ensures the bot NEVER forgets important user information
+     * Includes both DB data and newly extracted info from current session
+     */
+    private buildContextMemory(
+        leadData: Awaited<ReturnType<typeof this.getLeadData>>,
+        extractedInfo: ReturnType<typeof this.extractUserInfo>,
+        session: { messages: { content: string }[]; currentPath: string | null }
+    ): string {
+        const known: string[] = [];
+        const missing: string[] = [];
+
+        // Helper to add known or mark as missing
+        const check = (label: string, dbValue: unknown, extractedValue?: unknown) => {
+            const value = extractedValue || dbValue;
+            if (value) {
+                known.push(`${label}: ${value}`);
+            } else {
+                missing.push(label);
+            }
+        };
+
+        // Core identity
+        check('Name', leadData?.name, extractedInfo.name);
+        check('Location/City', leadData?.location, extractedInfo.location);
+        check('Phone', leadData?.phone, extractedInfo.phone);
+
+        // Demographics
+        check('Age', leadData?.age);
+        check('Gender', leadData?.gender);
+        check('Occupation', leadData?.occupation, extractedInfo.occupation);
+
+        // Financial
+        check('Budget', leadData?.budget ? `₹${leadData.budget.toLocaleString()}` : null);
+
+        // Interest/Path
+        check('Interest/Path', leadData?.interest || session.currentPath);
+        check('Product Category/Niche', leadData?.niche || leadData?.product_category);
+
+        // Experience (for trading)
+        if (session.currentPath === 'Path C' || leadData?.path === 'Path C') {
+            check('Trading Experience Level', leadData?.experience_level);
+        }
+
+        // Build the context block
+        const parts = [];
+
+        if (known.length > 0) {
+            parts.push(`KNOWN USER DATA (Never ask for this again):\n${known.join('\n')}`);
+        }
+
+        if (missing.length > 0) {
+            parts.push(`STILL NEEDED (Naturally ask in conversation):\n${missing.join(', ')}`);
+        }
+
+        // Add conversation summary
+        parts.push(`\nConversation: ${session.messages.length} messages. Topics: ${this.summarizeTopics(session.messages)}`);
+
+        return parts.join('\n\n');
     }
 
     /**

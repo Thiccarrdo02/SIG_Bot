@@ -19,6 +19,7 @@ import {
     calcFbaProfit,
     createSourcingInquiry,
     resetLeads,
+    deleteLead,
 } from '../controllers';
 
 const router = Router();
@@ -53,7 +54,8 @@ router.post('/calc/fba-profit', calcFbaProfit);
 // Sourcing inquiries
 router.post('/inquiries/sourcing', createSourcingInquiry);
 
-// Data Reset
+// Data Reset and Delete
 router.delete('/leads/reset', resetLeads);
+router.delete('/leads/:id', deleteLead);
 
 export default router;

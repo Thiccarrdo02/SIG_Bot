@@ -1289,8 +1289,11 @@
                             <div class="mt-auto">
                                 <div id="dynamicScripts" class="space-y-3 mb-4"></div>
                                 <button onclick="window.open('https://wa.me/918828888664', '_blank')"
-                                    class="w-full bg-sig-green hover:bg-green-500 text-black font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"><i
+                                    class="w-full bg-sig-green hover:bg-green-500 text-black font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all mb-3"><i
                                         data-lucide="message-circle" class="w-4 h-4"></i> Open WhatsApp</button>
+                                <button onclick="deleteLead(currentLeadId)"
+                                    class="w-full bg-sig-red/20 hover:bg-sig-red/30 text-sig-red border border-sig-red/30 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"><i
+                                        data-lucide="trash-2" class="w-4 h-4"></i> Delete Lead</button>
                             </div>
                         </div>
                     </div>
@@ -1793,6 +1796,29 @@
             }
 
             function closeModal() { document.getElementById('leadModal').classList.add('hidden'); }
+
+            // Delete a lead by ID
+            async function deleteLead(leadId) {
+                if (!confirm("⚠️ Delete this lead?\n\nThis will permanently remove this lead and all associated data.")) return;
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/leads/${leadId}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        closeModal();
+                        // Remove from local array
+                        leads = leads.filter(l => l.id !== leadId);
+                        renderLeads();
+                        loadDemographics();
+                        alert("Lead deleted successfully.");
+                    } else {
+                        alert("Error: " + (data.error || 'Failed to delete'));
+                    }
+                } catch (err) {
+                    console.error("Delete Error", err);
+                    alert("Failed to connect to backend.");
+                }
+            }
 
             // === UTILS ===
             function openCalculator() { document.getElementById('calcModal').classList.remove('hidden'); }

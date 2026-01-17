@@ -270,3 +270,18 @@ export async function resetLeads(req: Request, res: Response) {
         res.status(500).json({ error: 'Failed to reset data' });
     }
 }
+
+/**
+ * DELETE /api/leads/:id
+ * Delete a single lead by ID
+ */
+export async function deleteLead(req: Request, res: Response) {
+    try {
+        const id = req.params.id as string;
+        await leadService.deleteLead(id);
+        res.json({ success: true, message: 'Lead deleted successfully.' });
+    } catch (error) {
+        logger.error('Error deleting lead:', error);
+        res.status(500).json({ error: 'Failed to delete lead' });
+    }
+}

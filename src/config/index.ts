@@ -30,9 +30,10 @@ export const config = {
 
   // Session settings (configurable via env)
   session: {
-    ttlSeconds: parseInt(process.env.SESSION_TTL_HOURS || '24') * 60 * 60,
-    inactivityMinutes: parseInt(process.env.INACTIVITY_MINUTES || '15'),
-    historyLimit: parseInt(process.env.CHAT_HISTORY_LIMIT || '12'),
+    ttlSeconds: parseInt(process.env.SESSION_TTL_HOURS || '72') * 60 * 60, // 72 hours for longer memory
+    inactivityMinutes: parseInt(process.env.INACTIVITY_MINUTES || '10'), // Extraction triggers 10 mins after last message
+    historyLimit: parseInt(process.env.CHAT_HISTORY_LIMIT || '100'), // Store up to 100 messages in DB
+    contextLimit: parseInt(process.env.CONTEXT_LIMIT || '10'), // Only send last 10 messages to LLM (token efficiency)
   },
 
   // Model settings (configurable via env)

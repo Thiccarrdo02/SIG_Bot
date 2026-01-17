@@ -314,6 +314,22 @@ export class LeadService {
         }, {} as Record<string, T[]>);
     }
     /**
+     * Delete a single lead by ID
+     */
+    async deleteLead(id: string) {
+        try {
+            // Delete related sessions and hudood queries first
+            await prisma.session.deleteMany({ where: { lead_id: id } });
+            await prisma.hudoodQuery.deleteMany({ where: { lead_id: id } });
+            // Delete the lead
+            return await prisma.lead.delete({ where: { id } });
+        } catch (error) {
+            logger.error(`Error deleting lead ${id}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Delete ALL leads (Data Reset)
      */
     async deleteAllLeads() {
