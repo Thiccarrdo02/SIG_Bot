@@ -257,9 +257,8 @@ export class ResponderService {
     }
 
     /**
-     * Build comprehensive context memory block
-     * This ensures the bot NEVER forgets important user information
-     * Includes both DB data and newly extracted info from current session
+     * Build context memory block with known user information
+     * IMPORTANT: Keep this simple to not interfere with path detection
      */
     private buildContextMemory(
         leadData: Awaited<ReturnType<typeof this.getLeadData>>,
@@ -267,55 +266,28 @@ export class ResponderService {
         session: { messages: { content: string }[]; currentPath: string | null }
     ): string {
         const known: string[] = [];
-        const missing: string[] = [];
 
-        // Helper to add known or mark as missing
-        const check = (label: string, dbValue: unknown, extractedValue?: unknown) => {
-            const value = extractedValue || dbValue;
-            if (value) {
-                known.push(`${label}: ${value}`);
-            } else {
-                missing.push(label);
-            }
-        };
+        // Core identity - only add if we have values
+        const name = extractedInfo.name || leadData?.name;
+        const location = extractedInfo.location || leadData?.location;
+        const phone = extractedInfo.phone || leadData?.phone;
+        const occupation = extractedInfo.occupation || leadData?.occupation;
+        const age = leadData?.age;
+        const budget = leadData?.budget;
 
-        // Core identity
-        check('Name', leadData?.name, extractedInfo.name);
-        check('Location/City', leadData?.location, extractedInfo.location);
-        check('Phone', leadData?.phone, extractedInfo.phone);
+        if (name) known.push(`Name: ${name}`);
+        if (location) known.push(`Location: ${location}`);
+        if (phone) known.push(`Phone: ${phone}`);
+        if (occupation) known.push(`Occupation: ${occupation}`);
+        if (age) known.push(`Age: ${age}`);
+        if (budget) known.push(`Budget: ₹${budget.toLocaleString()}`);
 
-        // Demographics
-        check('Age', leadData?.age);
-        check('Gender', leadData?.gender);
-        check('Occupation', leadData?.occupation, extractedInfo.occupation);
-
-        // Financial
-        check('Budget', leadData?.budget ? `₹${leadData.budget.toLocaleString()}` : null);
-
-        // Interest/Path
-        check('Interest/Path', leadData?.interest || session.currentPath);
-        check('Product Category/Niche', leadData?.niche || leadData?.product_category);
-
-        // Experience (for trading)
-        if (session.currentPath === 'Path C' || leadData?.path === 'Path C') {
-            check('Trading Experience Level', leadData?.experience_level);
-        }
-
-        // Build the context block
-        const parts = [];
-
+        // Build simple context string
         if (known.length > 0) {
-            parts.push(`KNOWN USER DATA (Never ask for this again):\n${known.join('\n')}`);
+            return `User Info: ${known.join(', ')}. Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
         }
 
-        if (missing.length > 0) {
-            parts.push(`STILL NEEDED (Naturally ask in conversation):\n${missing.join(', ')}`);
-        }
-
-        // Add conversation summary
-        parts.push(`\nConversation: ${session.messages.length} messages. Topics: ${this.summarizeTopics(session.messages)}`);
-
-        return parts.join('\n\n');
+        return `New user. Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
     }
 
     /**

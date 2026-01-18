@@ -142,6 +142,8 @@ export class LeadService {
         name: string;
         location: string;
         phone: string;
+        instagram_handle: string;
+        is_important: boolean;
         budget: number;
         path: string;
         niche: string;
@@ -297,9 +299,9 @@ export class LeadService {
      * Helper: Get budget tier
      */
     private getBudgetTier(budget: number): string {
-        if (budget >= 800000) return 'VIP';
-        if (budget >= 100000) return 'Mid';
-        return 'Low Cap';
+        if (budget >= 500000) return 'VIP';  // ₹5L+ = VIP
+        if (budget >= 100000) return 'Mid';   // ₹1-5L = Mid
+        return 'Low Cap';                      // <₹1L = Low Cap
     }
 
     /**

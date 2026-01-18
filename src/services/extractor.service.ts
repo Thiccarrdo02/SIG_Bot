@@ -14,6 +14,8 @@ export interface ExtractedData {
     name: string | null;
     location: string | null;
     phone: string | null;
+    instagram_handle: string | null;  // Instagram username
+    is_important: boolean;            // True when phone collected (high-value lead)
     path: string;
     interest: string | null;
     niche: string | null;
@@ -98,6 +100,8 @@ export class ExtractorService {
                     name: data.name,
                     location: data.location,
                     phone: data.phone,
+                    instagram_handle: data.instagram_handle,
+                    is_important: data.is_important,
                     path: data.path,
                     interest: data.interest,
                     niche: data.niche,
@@ -124,6 +128,8 @@ export class ExtractorService {
                     name: data.name,
                     location: data.location,
                     phone: data.phone,
+                    instagram_handle: data.instagram_handle,
+                    is_important: data.is_important,
                     path: data.path,
                     interest: data.interest,
                     niche: data.niche,
@@ -167,10 +173,14 @@ export class ExtractorService {
      * Validate and clean extracted data
      */
     private validateAndClean(data: ExtractedData): ExtractedData {
+        const phone = this.cleanPhone(data.phone);
+
         return {
             name: data.name || null,
             location: data.location || null,
-            phone: this.cleanPhone(data.phone),
+            phone: phone,
+            instagram_handle: this.cleanInstagram(data.instagram_handle),
+            is_important: phone !== null, // Important if phone was collected
             path: this.validatePath(data.path),
             interest: data.interest || null,
             niche: data.niche || null,
@@ -204,6 +214,18 @@ export class ExtractorService {
         if (cleaned && !cleaned.startsWith('+')) {
             return '+91' + cleaned;
         }
+        return cleaned || null;
+    }
+
+    /**
+     * Clean Instagram handle
+     */
+    private cleanInstagram(handle: string | null | undefined): string | null {
+        if (!handle) return null;
+        // Remove @ if present and clean
+        let cleaned = handle.trim().replace(/^@/, '');
+        // Remove URLs
+        cleaned = cleaned.replace(/^(https?:\/\/)?(www\.)?instagram\.com\//i, '');
         return cleaned || null;
     }
 

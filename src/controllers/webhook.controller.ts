@@ -18,6 +18,7 @@ const ManyChatPayloadSchema = z.object({
     user_message: z.string().optional(),
     message_id: z.string().optional(),
     user_name: z.string().optional(),
+    instagram_username: z.string().optional(), // Auto-captured from ManyChat
     contact_info: z.object({
         first_name: z.string().optional(),
         last_name: z.string().optional(),
@@ -66,12 +67,13 @@ export async function handleManyChatWebhook(req: Request, res: Response) {
         // Get or create session
         const session = await sessionService.getSession(userId);
 
-        // Update lead with contact info if available
-        if (contact_info?.first_name || contact_info?.phone) {
+        // Update lead with contact info if available (including Instagram from ManyChat)
+        if (contact_info?.first_name || contact_info?.phone || payload.instagram_username) {
             try {
                 await leadService.updateLead(session.leadId, {
-                    name: contact_info.first_name || undefined,
-                    phone: contact_info.phone || undefined,
+                    name: contact_info?.first_name || undefined,
+                    phone: contact_info?.phone || undefined,
+                    instagram_handle: payload.instagram_username || undefined,
                 });
             } catch (e) {
                 // Ignore update errors

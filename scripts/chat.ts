@@ -137,8 +137,17 @@ async function chat(): Promise<void> {
                 result.detectedPath
             );
 
-            // Display response (clean output, no internal tags)
+            // Display response with path info
             console.log(`🤖 Bot: ${result.reply}\n`);
+
+            // Show detected path for testing
+            if (result.detectedPath) {
+                console.log(`📍 [Detected Path: ${result.detectedPath}]\n`);
+            }
+
+            // Show message count
+            const updatedSession = await sessionService.getSession(TEST_USER_ID);
+            console.log(`📊 [Messages: ${updatedSession.messages.length} | Path: ${updatedSession.currentPath || 'E'}]\n`);
 
         } catch (error: any) {
             console.error('\n❌ Error:', error.message || error);

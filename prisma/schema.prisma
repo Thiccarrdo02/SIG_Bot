@@ -16,6 +16,10 @@ model Lead {
   name            String?
   location        String?
   phone           String?
+  instagram_handle String?  // Instagram username (collected from everyone)
+  
+  // Important Lead Flag
+  is_important    Boolean   @default(false) // True when phone collected (high-value scenarios)
   
   // Path & Interest
   path            String?   // "Path A", "Path B", "Path C", "Path D", "Path E"
@@ -62,6 +66,7 @@ model Lead {
   @@index([status])
   @@index([budget_tier])
   @@index([created_at])
+  @@index([is_important])
 }
 
 // Session table - stores conversation history
