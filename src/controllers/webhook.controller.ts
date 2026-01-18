@@ -47,9 +47,9 @@ export async function handleManyChatWebhook(req: Request, res: Response) {
 
         logger.info(`Webhook received from ${userId}: "${userMessage.slice(0, 50)}..."`);
 
-        // Check for duplicate
-        if (message_id && await sessionService.isDuplicate(message_id)) {
-            logger.info(`Duplicate message ${message_id}, skipping`);
+        // Check for duplicate (using both message_id and content hash)
+        if (await sessionService.isDuplicate(message_id || '', userId, userMessage)) {
+            logger.info(`Duplicate message from ${userId}, skipping`);
             return res.status(200).json({ status: 'duplicate' });
         }
 

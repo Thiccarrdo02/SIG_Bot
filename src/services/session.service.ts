@@ -233,15 +233,40 @@ export class SessionService {
     }
 
     /**
-     * Check for duplicate message
+     * Check for duplicate message (using message_id OR content hash)
+     * This prevents the same response from being sent twice
      */
-    async isDuplicate(messageId: string): Promise<boolean> {
-        const key = `${DEDUP_PREFIX}${messageId}`;
-        const exists = await cache.exists(key);
-        if (exists) return true;
+    async isDuplicate(messageId: string, userId?: string, content?: string): Promise<boolean> {
+        // Check by message_id if provided
+        if (messageId) {
+            const key = `${DEDUP_PREFIX}${messageId}`;
+            const exists = await cache.exists(key);
+            if (exists) return true;
+            await cache.set(key, '1', 300);
+        }
 
-        await cache.set(key, '1', 300);
+        // Also check by content hash (fallback for when message_id is missing)
+        if (userId && content) {
+            const contentKey = `${DEDUP_PREFIX}content:${userId}:${this.hashContent(content)}`;
+            const exists = await cache.exists(contentKey);
+            if (exists) return true;
+            await cache.set(contentKey, '1', 60); // 60 second window for content-based dedup
+        }
+
         return false;
+    }
+
+    /**
+     * Simple hash for content-based deduplication
+     */
+    private hashContent(content: string): string {
+        let hash = 0;
+        for (let i = 0; i < content.length; i++) {
+            const char = content.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
     }
 
     /**

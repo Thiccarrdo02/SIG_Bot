@@ -105,11 +105,13 @@ app.listen(PORT, () => {
     logger.info(`🔗 Webhook: http://localhost:${PORT}/api/webhook/manychat`);
     logger.info(`💚 Health: http://localhost:${PORT}/api/health`);
 
-    // Start cron job for session extraction (every 5 minutes)
-    cron.schedule('*/5 * * * *', () => {
+    // Start cron job for session extraction (configurable via EXTRACTION_CRON_MINUTES)
+    const cronMinutes = config.session.extractionCronMinutes;
+    const inactivityMinutes = config.session.inactivityMinutes;
+    cron.schedule(`*/${cronMinutes} * * * *`, () => {
         processInactiveSessions().catch(err => logger.error('Cron error:', err));
     });
-    logger.info('⏰ Extraction cron job scheduled (every 5 minutes)');
+    logger.info(`⏰ Extraction cron scheduled: checks every ${cronMinutes} mins, extracts after ${inactivityMinutes} mins inactivity`);
 
     // Run once on startup after 30 seconds
     setTimeout(() => {

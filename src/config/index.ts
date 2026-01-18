@@ -34,6 +34,7 @@ export const config = {
     inactivityMinutes: parseInt(process.env.INACTIVITY_MINUTES || '10'), // Extraction triggers 10 mins after last message
     historyLimit: parseInt(process.env.CHAT_HISTORY_LIMIT || '100'), // Store up to 100 messages in DB
     contextLimit: parseInt(process.env.CONTEXT_LIMIT || '10'), // Only send last 10 messages to LLM (token efficiency)
+    extractionCronMinutes: parseInt(process.env.EXTRACTION_CRON_MINUTES || '5'), // How often cron checks for inactive sessions
   },
 
   // Model settings (configurable via env)
