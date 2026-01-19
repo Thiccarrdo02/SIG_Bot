@@ -99,8 +99,8 @@ export class ExtractorService {
                 update: {
                     name: data.name,
                     location: data.location,
-                    phone: data.phone,
-                    instagram_handle: data.instagram_handle,
+                    phone: data.phone || undefined,
+                    instagram_handle: data.instagram_handle || undefined,
                     is_important: data.is_important,
                     path: data.path,
                     interest: data.interest,

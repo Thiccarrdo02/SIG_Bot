@@ -19,6 +19,8 @@ const ManyChatPayloadSchema = z.object({
     message_id: z.string().optional(),
     user_name: z.string().optional(),
     instagram_username: z.string().optional(), // Auto-captured from ManyChat
+    username: z.string().optional(), // Common fallback
+    ig_username: z.string().optional(), // Another fallback
     contact_info: z.object({
         first_name: z.string().optional(),
         last_name: z.string().optional(),
@@ -73,7 +75,7 @@ export async function handleManyChatWebhook(req: Request, res: Response) {
                 await leadService.updateLead(session.leadId, {
                     name: contact_info?.first_name || undefined,
                     phone: contact_info?.phone || undefined,
-                    instagram_handle: payload.instagram_username || undefined,
+                    instagram_handle: payload.instagram_username || payload.username || payload.ig_username || undefined,
                 });
             } catch (e) {
                 // Ignore update errors

@@ -401,7 +401,7 @@
                                         data-lucide="book" class="w-5 h-5 text-blue-400"></i></div><span
                                     class="text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full">+18%</span>
                             </div>
-                            <div class="text-3xl font-bold text-white mb-1">0</div>
+                            <div class="text-3xl font-bold text-white mb-1" id="statsBook">0</div>
                             <div class="text-xs text-sig-mute uppercase tracking-wider font-semibold">Active Book Leads
                             </div>
                         </div>
@@ -410,7 +410,7 @@
                                 <div class="w-10 h-10 rounded-full bg-sig-greenDim flex items-center justify-center"><i
                                         data-lucide="package" class="w-5 h-5 text-sig-green"></i></div>
                             </div>
-                            <div class="text-3xl font-bold text-white mb-1">0</div>
+                            <div class="text-3xl font-bold text-white mb-1" id="statsSourcing">0</div>
                             <div class="text-xs text-sig-mute uppercase tracking-wider font-semibold">Active Sourcing
                                 Leads
                             </div>
@@ -421,7 +421,7 @@
                                         data-lucide="layers" class="w-5 h-5 text-orange-400"></i></div><span
                                     class="text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full">VIP</span>
                             </div>
-                            <div class="text-3xl font-bold text-white mb-1">0</div>
+                            <div class="text-3xl font-bold text-white mb-1" id="statsFba">0</div>
                             <div class="text-xs text-sig-mute uppercase tracking-wider font-semibold">Active FBA Leads
                             </div>
                         </div>
@@ -430,7 +430,7 @@
                                 <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center"><i
                                         data-lucide="bar-chart-2" class="w-5 h-5 text-blue-500"></i></div>
                             </div>
-                            <div class="text-3xl font-bold text-white mb-1">0</div>
+                            <div class="text-3xl font-bold text-white mb-1" id="statsTrading">0</div>
                             <div class="text-xs text-sig-mute uppercase tracking-wider font-semibold">Active Trading
                                 Leads
                             </div>
@@ -445,12 +445,13 @@
                         <div class="flex justify-between items-center mb-4 relative z-10">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2"><i
                                     data-lucide="alert-triangle" class="w-5 h-5 text-sig-red"></i> Action Required <span
+                                    id="actionReqCount"
                                     class="px-2 py-0.5 rounded-full bg-sig-red/20 text-sig-red text-[10px] font-bold border border-sig-red/20">0
                                     Pending</span></h3>
                             <button class="text-xs text-gray-400 hover:text-white flex items-center gap-1">View All <i
                                     data-lucide="chevron-right" class="w-3 h-3"></i></button>
                         </div>
-                        <div class="space-y-3 relative z-10">
+                        <div class="space-y-3 relative z-10" id="actionReqList">
                             <div class="text-center text-gray-500 py-4 text-xs italic">No pending actions</div>
                         </div>
                     </div>
@@ -469,7 +470,7 @@
                                 <div class="text-center text-gray-500 py-4 text-sm italic">No query data yet</div>
                             </div>
                             <div class="flex flex-col items-center justify-center p-4">
-                                <div class="pie-chart shadow-2xl"></div>
+                                <div class="pie-chart shadow-2xl" id="queryDistChart"></div>
                             </div>
                         </div>
                     </div>
@@ -586,8 +587,8 @@
                                     <div class="col-span-2 text-right">Target Price</div>
                                     <div class="col-span-3 text-right">Actions</div>
                                 </div>
-                                <div class="divide-y divide-white/5">
-                                    <div class="text-center text-gray-500 py-8 text-sm">No active requests found</div>
+                                <div class="divide-y divide-white/5" id="sourcingRequestsList">
+                                    <div class="text-center text-gray-500 py-8 text-sm">Loading requests...</div>
                                 </div>
                             </div>
                         </div>
@@ -1297,7 +1298,8 @@
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5"><span
                                         class="text-[10px] text-sig-mute uppercase font-bold tracking-wider">Contact</span>
-                                    <div class="text-lg font-mono font-bold text-white mt-1" id="modalPhone">--</div>
+                                    <div class="text-lg font-mono font-bold text-white mt-1 truncate" id="modalPhone">--
+                                    </div>
                                 </div>
                                 <div class="bg-white/5 p-4 rounded-2xl border border-white/5"><span
                                         class="text-[10px] text-sig-mute uppercase font-bold tracking-wider">Instagram</span>
@@ -1376,6 +1378,7 @@
 
                         // Load leads from API
                         await loadLeads();
+                        loadStats();
                     } else {
                         throw new Error('Backend not responding');
                     }
@@ -1427,6 +1430,49 @@
                     console.error('Error loading leads:', error);
                     leads = [];
                     renderLeads();
+                }
+            }
+
+            // Load Stats
+            async function loadStats() {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/stats`);
+                    if (res.ok) {
+                        const stats = await res.json();
+                        if (document.getElementById('statsBook')) document.getElementById('statsBook').innerText = stats.activeBookLeads || 0;
+                        if (document.getElementById('statsSourcing')) document.getElementById('statsSourcing').innerText = stats.activeSourcingLeads || 0;
+                        if (document.getElementById('statsFba')) document.getElementById('statsFba').innerText = stats.activeFbaLeads || 0;
+                        if (document.getElementById('statsTrading')) document.getElementById('statsTrading').innerText = stats.activeTradingLeads || 0;
+
+                        // Update Action Required
+                        if (document.getElementById('actionReqCount')) {
+                            const pending = stats.pendingPayment || 0;
+                            document.getElementById('actionReqCount').innerText = `${pending} Pending`;
+                            const list = document.getElementById('actionReqList');
+                            if (pending > 0) {
+                                list.innerHTML = `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between"><span class="text-xs text-red-300 font-bold">Pending Payments</span><span class="text-xs font-bold text-white">${pending}</span></div>`;
+                            } else {
+                                list.innerHTML = '<div class="text-center text-gray-500 py-4 text-xs italic">No pending actions</div>';
+                            }
+                        }
+
+                        updateCharts(stats);
+                    }
+                } catch (error) {
+                    console.error('Error loading stats:', error);
+                }
+            }
+
+            function updateCharts(stats) {
+                const total = (stats.activeBookLeads + stats.activeSourcingLeads + stats.activeFbaLeads) || 1;
+                // Simple distribution for now
+                const pA = Math.round((stats.activeSourcingLeads / total) * 100);
+                const pB = Math.round((stats.activeFbaLeads / total) * 100);
+                const pC = Math.round((stats.activeBookLeads / total) * 100);
+
+                const chart = document.getElementById('queryDistChart');
+                if (chart) {
+                    chart.style.background = `conic-gradient(#30D158 0% ${pA}%, #FFD60A ${pA}% ${pA + pB}%, #0A84FF ${pA + pB}% 100%)`;
                 }
             }
 
@@ -1539,6 +1585,7 @@
                 setInterval(() => {
                     if (isConnected) {
                         loadLeads();
+                        loadStats();
                     }
                 }, 30000);
             }
@@ -1559,7 +1606,7 @@
 
                     if (!shouldRender) return;
 
-                    const score = lead.budget > 800000 ? 9.5 : 7.2;
+                    const score = lead.bot_score || 0;
                     const scoreClass = score > 8 ? 'text-sig-gold' : 'text-sig-green';
                     const pathColors = { "Path A": "text-white bg-white/10", "Path B": "text-black bg-sig-gold", "Path C": "text-blue-400 bg-blue-500/20", "Path D": "text-purple-400 bg-purple-500/20", "Path E": "text-gray-400 bg-white/5" };
 
@@ -1585,7 +1632,7 @@
             function openAddLeadModal() { document.getElementById('addLeadModal').classList.remove('hidden'); }
             function closeAddLeadModal() { document.getElementById('addLeadModal').classList.add('hidden'); }
 
-            function saveNewLead() {
+            async function saveNewLead() {
                 const name = document.getElementById('newLeadName').value;
                 const loc = document.getElementById('newLeadLoc').value;
                 const phone = document.getElementById('newLeadPhone').value;
@@ -1594,23 +1641,32 @@
                 const niche = document.getElementById('newLeadNiche').value;
 
                 if (name && loc) {
-                    const newLead = {
-                        id: leads.length + 1,
-                        name: name,
-                        location: loc,
-                        phone: phone,
-                        niche: niche,
-                        budget: bud,
-                        path: path,
-                        transcript: "Manual Entry",
-                        gender: "Male",
-                        age: 25,
-                        occupation: "Business"
+                    const payload = {
+                        name, location: loc, phone: phone || undefined,
+                        budget: bud, path: path, niche: niche || 'General',
+                        status: 'New', interest: niche || 'General'
                     };
-                    leads.unshift(newLead);
-                    renderLeads();
-                    closeAddLeadModal();
-                    alert("Lead Added Successfully");
+
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/api/leads`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            alert("Lead Added Successfully");
+                            closeAddLeadModal();
+                            loadLeads();
+                            loadStats();
+                        } else {
+                            const data = await res.json();
+                            alert("Error: " + (data.error || 'Failed to save'));
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert("Network Error");
+                    }
                 }
             }
 
@@ -2014,8 +2070,35 @@
                 }
                 if (viewName === 'trading') renderTradingLeads('All');
                 if (viewName === 'fba') renderFbaLeads('All');
+                if (viewName === 'sourcing') renderSourcingRequests();
                 if (viewName === 'dashboard') renderLeads('all');
                 if (viewName === 'hudood') renderHudoodLeads();
+            }
+
+            function renderSourcingRequests() {
+                const list = document.getElementById('sourcingRequestsList');
+                if (!list) return;
+                list.innerHTML = '';
+
+                const sourcingLeads = leads.filter(l => l.path === 'Path A');
+                if (sourcingLeads.length === 0) {
+                    list.innerHTML = '<div class="text-center text-gray-500 py-8 text-sm">No active sourcing requests</div>';
+                    return;
+                }
+
+                sourcingLeads.forEach(lead => {
+                    const row = document.createElement('div');
+                    row.className = "grid grid-cols-12 px-6 py-4 items-center apple-table-row hover:bg-white/5 transition-colors cursor-pointer";
+                    row.onclick = () => openModal(lead);
+                    row.innerHTML = `
+                        <div class="col-span-3"><div class="font-bold text-white text-sm">${lead.name}</div><div class="text-xs text-gray-500">${lead.niche}</div></div>
+                        <div class="col-span-2"><span class="px-2 py-1 rounded text-[10px] font-bold text-white bg-white/10 border border-white/5">Sourcing</span></div>
+                        <div class="col-span-2 text-xs text-gray-300">Inquiry</div>
+                        <div class="col-span-2 text-right font-mono text-xs text-sig-mute">₹${(lead.budget / 1000).toFixed(0)}k</div>
+                        <div class="col-span-3 text-right"><button class="text-xs font-bold text-blue-400 hover:text-white">View Details</button></div>
+                     `;
+                    list.appendChild(row);
+                });
             }
 
             function filterTable(filterName, btn) {
