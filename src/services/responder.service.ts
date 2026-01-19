@@ -258,14 +258,15 @@ export class ResponderService {
 
     /**
      * Build context memory block with known user information
-     * IMPORTANT: Keep this simple to not interfere with path detection
+     * CRITICAL: Explicitly tell LLM not to ask for info we already have
      */
     private buildContextMemory(
         leadData: Awaited<ReturnType<typeof this.getLeadData>>,
         extractedInfo: ReturnType<typeof this.extractUserInfo>,
         session: { messages: { content: string }[]; currentPath: string | null }
     ): string {
-        const known: string[] = [];
+        const collected: string[] = [];
+        const doNotAsk: string[] = [];
 
         // Core identity - only add if we have values
         const name = extractedInfo.name || leadData?.name;
@@ -275,23 +276,42 @@ export class ResponderService {
         const age = leadData?.age;
         const budget = leadData?.budget;
 
-        if (name) known.push(`Name: ${name}`);
-        if (location) known.push(`Location: ${location}`);
-        if (phone) known.push(`Phone: ${phone}`);
-        if (occupation) known.push(`Occupation: ${occupation}`);
-        if (age) known.push(`Age: ${age}`);
-        if (budget) known.push(`Budget: ₹${budget.toLocaleString()}`);
+        // Build collected info AND do-not-ask list
+        if (name) {
+            collected.push(`Name: ${name}`);
+            doNotAsk.push('name');
+        }
+        if (location) {
+            collected.push(`Location: ${location}`);
+            doNotAsk.push('location');
+        }
+        if (phone) {
+            collected.push(`Phone: ${phone}`);
+            doNotAsk.push('phone');
+        }
+        if (occupation) {
+            collected.push(`Occupation: ${occupation}`);
+            doNotAsk.push('occupation');
+        }
+        if (age) collected.push(`Age: ${age}`);
+        if (budget) collected.push(`Budget: ₹${budget.toLocaleString()}`);
 
-        // Build simple context string
-        if (known.length > 0) {
-            return `User Info: ${known.join(', ')}. Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
+        // Build context with explicit instruction not to re-ask
+        if (collected.length > 0) {
+            let context = `KNOWN USER INFO: ${collected.join(', ')}.`;
+            if (doNotAsk.length > 0) {
+                context += ` CRITICAL: Do NOT ask for ${doNotAsk.join(', ')} again - we already have this info.`;
+            }
+            context += ` Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
+            return context;
         }
 
-        return `New user. Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
+        return `New user (no info collected yet). Messages: ${session.messages.length}. Topics: ${this.summarizeTopics(session.messages)}`;
     }
 
     /**
      * Extract user info from conversation history
+     * IMPROVED: Better patterns for detecting name+location in one line
      */
     private extractUserInfo(messages: { role: string; content: string }[]): {
         name: string | null;
@@ -299,40 +319,91 @@ export class ResponderService {
         phone: string | null;
         occupation: string | null;
     } {
-        const allText = messages.map(m => m.content).join(' ');
+        // Only look at user messages
+        const userMessages = messages.filter(m => m.role === 'user');
+        const allText = userMessages.map(m => m.content).join(' ');
 
         let name: string | null = null;
         let location: string | null = null;
         let phone: string | null = null;
         let occupation: string | null = null;
 
-        // Extract name - patterns like "mera naam X hai", "my name is X", "I am X"
-        const namePatterns = [
-            /(?:mera naam|my name is|i am|i'm|naam)\s+([a-zA-Z]+)/i,
-            /(?:naam|name)\s*:?\s*([a-zA-Z]+)/i,
+        // Expanded city list (80+ cities including Kashmir region)
+        const cities = [
+            // Major metros
+            'delhi', 'mumbai', 'bangalore', 'bengaluru', 'hyderabad', 'chennai', 'kolkata', 'pune', 'ahmedabad',
+            // Tier 2 cities
+            'jaipur', 'lucknow', 'kanpur', 'nagpur', 'patna', 'bhopal', 'ludhiana', 'agra', 'vadodara', 'coimbatore',
+            'madurai', 'indore', 'thane', 'surat', 'nashik', 'rajkot', 'varanasi', 'chandigarh', 'guwahati', 'mysore',
+            'ranchi', 'jodhpur', 'raipur', 'kochi', 'visakhapatnam', 'bhubaneswar', 'thiruvananthapuram', 'gurgaon', 'noida', 'faridabad',
+            // Kashmir & North India
+            'srinagar', 'kashmir', 'jammu', 'hyderpora', 'leh', 'ladakh', 'shimla', 'manali', 'dehradun', 'rishikesh',
+            'haridwar', 'mussoorie', 'amritsar', 'jalandhar', 'pathankot', 'dharamshala', 'kullu', 'pahalgam', 'gulmarg',
+            // South India  
+            'mangalore', 'hubli', 'belgaum', 'trivandrum', 'calicut', 'kozhikode', 'thrissur', 'palakkad', 'ernakulam',
+            // East India
+            'siliguri', 'durgapur', 'asansol', 'cuttack', 'rourkela',
+            // West India
+            'navi mumbai', 'aurangabad', 'solapur', 'kolhapur', 'sangli', 'jamnagar', 'bhavnagar', 'junagadh',
+            // Central India
+            'jabalpur', 'gwalior', 'ujjain', 'rewa',
+            // Gulf countries (many users from there)
+            'dubai', 'sharjah', 'abu dhabi', 'riyadh', 'jeddah', 'dammam', 'doha', 'muscat', 'kuwait', 'bahrain', 'medina', 'mecca'
         ];
-        for (const pattern of namePatterns) {
-            const match = allText.match(pattern);
-            if (match && match[1] && match[1].length > 1) {
-                name = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-                break;
-            }
-        }
 
-        // Extract location - city names
-        const cities = ['delhi', 'mumbai', 'bangalore', 'hyderabad', 'chennai', 'kolkata', 'pune', 'indore', 'ahmedabad', 'jaipur', 'lucknow', 'kanpur', 'nagpur', 'patna', 'bhopal', 'ludhiana', 'agra', 'vadodara', 'coimbatore', 'madurai'];
-        for (const city of cities) {
-            if (allText.toLowerCase().includes(city)) {
-                location = city.charAt(0).toUpperCase() + city.slice(1);
-                break;
-            }
-        }
-
-        // Extract phone - 10 digit numbers
+        // Extract phone first - 10 digit numbers
         const phoneMatch = allText.match(/(\+91\s*)?[6-9]\d{9}/g);
         if (phoneMatch && phoneMatch.length > 0) {
             phone = phoneMatch[phoneMatch.length - 1].replace(/\s/g, '');
             if (!phone.startsWith('+91')) phone = '+91' + phone;
+        }
+
+        // Extract location - check for city names
+        for (const city of cities) {
+            const cityRegex = new RegExp(`\\b${city}\\b`, 'i');
+            if (cityRegex.test(allText)) {
+                location = city.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                break;
+            }
+        }
+
+        // Extract name - multiple patterns
+        const namePatterns = [
+            /(?:mera naam|my name is|i am|i'm|naam)\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
+            /(?:naam|name)\s*:?\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
+        ];
+        for (const pattern of namePatterns) {
+            const match = allText.match(pattern);
+            if (match && match[1] && match[1].length > 1) {
+                name = match[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                break;
+            }
+        }
+
+        // FALLBACK: If location found but no name, check for "Name Location" pattern
+        // This handles cases like "Malik N Marof Hyderpora Srinagar Kashmir"
+        if (location && !name) {
+            for (const msg of userMessages) {
+                const content = msg.content.trim();
+                // Check if message contains a city name
+                for (const city of cities) {
+                    const cityRegex = new RegExp(`\\b${city}\\b`, 'i');
+                    if (cityRegex.test(content)) {
+                        // Extract everything before the city as potential name
+                        const cityIndex = content.toLowerCase().indexOf(city.toLowerCase());
+                        if (cityIndex > 2) {
+                            const potentialName = content.substring(0, cityIndex).trim();
+                            // Validate: should be 2-4 words, all alphabetic
+                            const words = potentialName.split(/\s+/).filter(w => /^[a-zA-Z]+$/.test(w));
+                            if (words.length >= 1 && words.length <= 4) {
+                                name = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (name) break;
+            }
         }
 
         // Extract occupation

@@ -68,7 +68,8 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Session extraction cron job - runs every 5 minutes
+// Session extraction cron job - runs every N minutes
+// LEAD QUALIFICATION: Only save leads with 3+ messages (engaged users)
 async function processInactiveSessions() {
     try {
         const inactiveSessions = await sessionService.getInactiveSessions();
@@ -76,13 +77,31 @@ async function processInactiveSessions() {
 
         logger.info(`[CRON] Processing ${inactiveSessions.length} inactive sessions...`);
 
+        let saved = 0;
+        let skipped = 0;
+
         for (const session of inactiveSessions) {
             try {
+                // LEAD QUALIFICATION CHECK
+                // Category 1: Low Interest - Skip if less than 3 messages (not engaged)
+                if (session.messages.length < 3) {
+                    logger.info(`[CRON] Skipping ${session.manychatId}: only ${session.messages.length} messages (low interest)`);
+                    await sessionService.markAsProcessed(session.manychatId);
+                    skipped++;
+                    continue;
+                }
+
                 const extractedData = await extractorService.extractData(session);
 
-                if (extractedData) {
+                // Category 2 & 3: Only save if we have name OR location (some engagement)
+                // Category 3 (Important): marked by is_important flag when phone collected
+                if (extractedData && (extractedData.name || extractedData.location)) {
                     await extractorService.saveToDatabase(session.manychatId, extractedData);
-                    logger.info(`[CRON] Extracted data for ${session.manychatId}: ${extractedData.name || 'Unknown'}`);
+                    logger.info(`[CRON] Saved lead ${session.manychatId}: ${extractedData.name || 'Unknown'} (${extractedData.location || 'Unknown'})`);
+                    saved++;
+                } else {
+                    logger.info(`[CRON] Skipping ${session.manychatId}: no name/location extracted`);
+                    skipped++;
                 }
 
                 await sessionService.markAsProcessed(session.manychatId);
@@ -91,7 +110,7 @@ async function processInactiveSessions() {
             }
         }
 
-        logger.info('[CRON] Session processing complete');
+        logger.info(`[CRON] Session processing complete: ${saved} saved, ${skipped} skipped`);
     } catch (error) {
         logger.error('[CRON] Session processing failed:', error);
     }

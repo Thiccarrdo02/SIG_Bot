@@ -316,6 +316,9 @@
                 <button onclick="switchView('demographics')" id="nav-demographics"
                     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"><i
                         data-lucide="users" class="w-4 h-4"></i> Demographics</button>
+                <button onclick="switchView('customers')" id="nav-customers"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"><i
+                        data-lucide="contact" class="w-4 h-4 text-sig-gold"></i> Customers</button>
 
                 <div class="px-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3 mt-8">Funnels
                 </div>
@@ -875,6 +878,46 @@
                     </div>
                 </div>
 
+                <!-- CUSTOMERS PAGE - All saved leads with full info -->
+                <div id="view-customers" class="view-section">
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+                        <div>
+                            <h2 class="text-3xl md:text-4xl font-bold text-white mb-2">Customers</h2>
+                            <p class="text-sig-mute text-sm md:text-base">All qualified leads (3+ messages,
+                                name/location collected)</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <select id="customerLocationFilter" onchange="renderCustomers()"
+                                class="px-4 py-2 rounded-xl bg-black border border-white/10 text-sm text-white focus:outline-none focus:border-sig-green">
+                                <option value="all">All Locations</option>
+                            </select>
+                            <div
+                                class="px-4 py-2 rounded-xl bg-sig-green/10 border border-sig-green/20 flex items-center gap-2">
+                                <span class="text-xs font-bold text-sig-green" id="customerCount">0 Customers</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-3xl overflow-hidden shadow-glass">
+                        <div class="table-scroll-container">
+                            <div class="table-min-width">
+                                <div
+                                    class="grid grid-cols-12 px-6 py-3 bg-white/5 border-b border-white/5 text-[10px] font-bold text-sig-mute uppercase tracking-wider">
+                                    <div class="col-span-2">Name</div>
+                                    <div class="col-span-2">Location</div>
+                                    <div class="col-span-2">Instagram</div>
+                                    <div class="col-span-1">Phone</div>
+                                    <div class="col-span-1">Path</div>
+                                    <div class="col-span-1">Budget</div>
+                                    <div class="col-span-2">Status</div>
+                                    <div class="col-span-1 text-right">Score</div>
+                                </div>
+                                <div id="customersList" class="divide-y divide-white/5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="view-hudood" class="view-section h-96 flex items-center justify-center text-center">
                     <div class="w-full max-w-5xl mx-auto px-6">
                         <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
@@ -1371,6 +1414,8 @@
                             interest: lead.interest || 'General',
                             phone: lead.phone || '',
                             instagram: lead.instagram_handle || '',
+                            bot_score: lead.bot_score || 0,
+                            is_important: lead.is_important || false,
                             stage: 0
                         }));
                     } else {
@@ -1824,6 +1869,65 @@
                     console.error("Delete Error", err);
                     alert("Failed to connect to backend.");
                 }
+            }
+
+            // === CUSTOMERS PAGE RENDERING ===
+            function renderCustomers() {
+                const container = document.getElementById('customersList');
+                const filterSelect = document.getElementById('customerLocationFilter');
+                const countSpan = document.getElementById('customerCount');
+                if (!container) return;
+
+                const selectedLocation = filterSelect?.value || 'all';
+
+                // Build unique locations for filter dropdown (only once)
+                const locations = [...new Set(leads.map(l => l.location).filter(loc => loc && loc !== '--'))];
+                if (filterSelect && filterSelect.options.length <= 1) {
+                    locations.sort().forEach(loc => {
+                        const opt = document.createElement('option');
+                        opt.value = loc;
+                        opt.text = loc;
+                        filterSelect.appendChild(opt);
+                    });
+                }
+
+                // Filter leads
+                let filtered = leads.filter(l => l.name && l.name !== 'Unknown');
+                if (selectedLocation !== 'all') {
+                    filtered = filtered.filter(l => l.location === selectedLocation);
+                }
+
+                // Sort by is_important first, then by score
+                filtered.sort((a, b) => {
+                    if (a.is_important && !b.is_important) return -1;
+                    if (!a.is_important && b.is_important) return 1;
+                    return (b.bot_score || 0) - (a.bot_score || 0);
+                });
+
+                container.innerHTML = '';
+                if (countSpan) countSpan.innerText = `${filtered.length} Customers`;
+
+                filtered.forEach(lead => {
+                    const pathColors = { "Path A": "text-white bg-white/10", "Path B": "text-black bg-sig-gold", "Path C": "text-blue-400 bg-blue-500/20", "Path D": "text-purple-400 bg-purple-500/20", "Path E": "text-gray-400 bg-white/5" };
+                    const scoreColor = lead.bot_score >= 70 ? 'text-sig-gold' : lead.bot_score >= 50 ? 'text-sig-green' : 'text-gray-400';
+                    const importantBorder = lead.is_important ? 'border-l-4 border-sig-gold' : '';
+
+                    const row = document.createElement('div');
+                    row.className = `grid grid-cols-12 px-6 py-4 items-center apple-table-row cursor-pointer ${importantBorder}`;
+                    row.onclick = () => openModal(lead);
+                    row.innerHTML = `
+                        <div class="col-span-2 font-medium text-white text-sm">${lead.name}</div>
+                        <div class="col-span-2 text-sm text-gray-400">${lead.location || '--'}</div>
+                        <div class="col-span-2 text-sm text-blue-400">${lead.instagram ? '@' + lead.instagram : '--'}</div>
+                        <div class="col-span-1 text-xs text-gray-400 font-mono">${lead.phone ? '✓' : '--'}</div>
+                        <div class="col-span-1"><span class="px-2 py-1 rounded text-[9px] font-bold ${pathColors[lead.path] || 'text-gray-400 bg-white/5'} border border-white/5">${lead.path || 'E'}</span></div>
+                        <div class="col-span-1 text-xs text-gray-400 font-mono">${lead.budget ? '₹' + (lead.budget / 1000).toFixed(0) + 'k' : '--'}</div>
+                        <div class="col-span-2 text-xs text-gray-400">${lead.status || 'New'}</div>
+                        <div class="col-span-1 text-right font-bold ${scoreColor}">${lead.bot_score || '--'}</div>
+                    `;
+                    container.appendChild(row);
+                });
+                lucide.createIcons();
             }
 
             // === UTILS ===
